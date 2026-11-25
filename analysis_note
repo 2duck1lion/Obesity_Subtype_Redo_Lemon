@@ -1,0 +1,65 @@
+################ Based on script: Wom_FC_validation_delta_inUse.ipynb ################
+1. Extract FC
+ - extract per band
+ - Within subject z-transform
+ 
+Out: 195*3828
+
+2. non-brain data adjustment
+ - build numerical AGE variable: compute the mean of each age group (e.g. 62.5 for age in [60-65])
+ 
+3. Covaraites (age and global fc) adjment 
+ - Map 'ID' from Non-brain data to 'subj_id' from FC data
+ - subjects with missing values excluded, 195 down to 184 [n = 184/195 ]
+ - Lineear Regression y ~ age + global FC
+ - compute R² for each FC feature and summarise the distribution
+
+4. Data filtering
+ - get female only   [n = 73/184 ]
+ - get obese/overweight only (BMI>25) [n = 25/73 ]
+ - Develop HUNGER SCORE: 
+   - vars used: 
+             FEV_FEV_HUNGER (the larger the hunger), 
+             Blood_Results_LEMON_GLU_in_mmol_l (the smaller the hunger)
+             Blood_Results_LEMON_TRIG_in_mmol_l (the smaller the hunger)
+   - score formula: z_transfrom (hunger - gluc - trig)
+     larger score means hungery, smaller means satiety
+ - get hunger/satiety state samples
+   - cut off: HUNGER SCORE >= 0.5 for hunger; or <= -0.5 for satiety 
+   - [n = 9/25 ] for hunger; [n = 7/25 ] for satiety; [n = 9/25 ] for intermediate (not used)
+   
+5. Identify the participants have their clinical data but are NOT included in the FC measures:
+ - 2 in hunger clincal set but not have FC: 'sub-010078', 'sub-010248', 
+ - 3 in staiety clincla set but not have FC: 'sub-010043', 'sub-010047', 'sub-010280'
+
+6. Sparse FC matrix using Within-subject Proportional Thresholding (20%) for the subset of subjects 
+
+7. Compute Degree centrality and betweenness centrality 
+   - Betweenness centrality: alculated for each ROI using an undirected, weighted functional connectivity network, where positive connectivity values were converted into edge distances (inverse connectivity strength), and centrality was quantified as the proportion of shortest paths between all pairs of other nodes passing through each ROI, with values normalised by network size.
+
+8. UMAP to check lemon and internal data similar data distribution, so that clustering validation make sense
+ - combine lemon features space (WDFC + BTWFC) with Internal fetaure space
+ - Z-score transform
+ - UMAP for visualisation
+ 
+9. Align lemon to internal data while keep internal data unchanged
+ - formula: X_lemon_aligned = ((X_lemon_origin - mean_lemon_origin) / SD_lemon_origin) * SD_internal + mean_internal
+ 
+10. RSKC validation 
+ - read the following from saved R files:
+   - cluster label
+   - feature weights
+   - cluster centroids
+   - feature names
+   - RSKC parameters (alpha, and L1)
+ - Assign lemon people to clusters 
+   -each person to the nearest original RSKC cluster centroid using weighted squared Euclidean distance, calculated with the feature weights
+   - formula : 
+     D(i, k) = SUM_j [w_j * (X_ij - centroid_kj)^2]
+     Assigned_Cluster(i) = argmin_k D(i, k)
+ - Confirming cluster ID consistency between internal FC and centroid used by lemon 
+
+11. Compare clinical variables
+ - Select clinical variables from lemon that are relevant to the significant variables from Internal data
+    - refer to 'MappingClinicalVars.csv' to see the mapping vars
+ - look at the distribution of these vars using boxplot
